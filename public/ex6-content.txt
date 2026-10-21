@@ -1,0 +1,336 @@
+EXPERIMENT 6: CUSTOMER SEGMENTATION USING DECISION TREE
+========================================================
+
+AIM
+---
+To classify retail customers into Low Value, Medium Value, and High Value segments using a Decision Tree classifier with entropy as the splitting criterion, and evaluate the model using accuracy, a classification report, a confusion matrix, a decision-tree plot, and feature importance.
+
+DATASET
+-------
+Online Retail dataset (Excel file: Online Retail.xlsx)
+- Transaction-level retail sales data.
+- The original notebook starts with 541,909 rows.
+- After cleaning, the original notebook reports 397,884 transaction rows.
+- Customer-level features are then created by grouping transactions by CustomerID.
+- Customers are divided into three spending segments using TotalSpend terciles.
+
+REQUIREMENTS
+------------
+Install if needed:
+pip install numpy pandas matplotlib scikit-learn openpyxl
+
+Place Online Retail.xlsx in the same folder as the Python program.
+
+FULL PROGRAM
+------------
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    ConfusionMatrixDisplay
+)
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+
+# 1. Load the retail dataset
+df = pd.read_excel("Online Retail.xlsx")
+
+print(df.head())
+print(df.info())
+
+# 2. Remove rows without a CustomerID
+df = df.dropna(subset=["CustomerID"])
+
+# 3. Remove cancelled invoices (invoice numbers beginning with C)
+df = df[~df["InvoiceNo"].astype(str).str.startswith("C")]
+
+# 4. Keep only positive quantities and prices
+df = df[df["Quantity"] > 0]
+df = df[df["UnitPrice"] > 0]
+
+# 5. Calculate the total amount for each transaction line
+df["TotalAmount"] = df["Quantity"] * df["UnitPrice"]
+
+print("Cleaned data shape:", df.shape)
+print(df.head())
+
+# 6. Aggregate transaction rows into one row per customer
+customer_data = df.groupby("CustomerID").agg(
+    TotalSpend=("TotalAmount", "sum"),
+    TotalQuantity=("Quantity", "sum"),
+    NumberOfTransactions=("InvoiceNo", "nunique"),
+    NumberOfProducts=("StockCode", "nunique"),
+    AverageOrderValue=("TotalAmount", "mean"),
+    Country=("Country", "first")
+).reset_index()
+
+print(customer_data.head())
+
+# 7. Create customer segments using thirds of TotalSpend
+customer_data["Segment"] = pd.qcut(
+    customer_data["TotalSpend"],
+    q=3,
+    labels=["Low Value", "Medium Value", "High Value"]
+)
+
+print(customer_data["Segment"].value_counts())
+
+# 8. Select features and target
+features = [
+    "TotalQuantity",
+    "NumberOfTransactions",
+    "NumberOfProducts",
+    "AverageOrderValue"
+]
+
+X = customer_data[features]
+y = customer_data["Segment"]
+
+# 9. Split into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.20,
+    random_state=42,
+    stratify=y
+)
+
+# 10. Create, train, and use the entropy-based Decision Tree
+id3_model = DecisionTreeClassifier(
+    criterion="entropy",
+    random_state=42,
+    max_depth=4
+)
+
+id3_model.fit(X_train, y_train)
+y_pred = id3_model.predict(X_test)
+
+print("\\nFirst 20 predictions:")
+print(y_pred[:20])
+
+# 11. Evaluate accuracy and classification metrics
+accuracy = accuracy_score(y_test, y_pred)
+print("\\nAccuracy:", accuracy)
+
+print("\\nClassification Report:")
+print(
+    classification_report(
+        y_test,
+        y_pred,
+        labels=["High Value", "Low Value", "Medium Value"],
+        zero_division=0
+    )
+)
+
+# 12. Display the confusion matrix
+cm_labels = ["High Value", "Low Value", "Medium Value"]
+cm = confusion_matrix(y_test, y_pred, labels=cm_labels)
+
+print("\\nConfusion Matrix:")
+print(cm)
+
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm,
+    display_labels=cm_labels
+)
+disp.plot(cmap="Blues", values_format="d")
+plt.title("Confusion Matrix - Customer Segmentation")
+plt.tight_layout()
+plt.show()
+
+# 13. Plot the trained decision tree
+plt.figure(figsize=(22, 12))
+plot_tree(
+    id3_model,
+    feature_names=features,
+    class_names=[str(c) for c in id3_model.classes_],
+    filled=True,
+    rounded=True,
+    proportion=False
+)
+plt.title("Customer Segmentation using Entropy-Based Decision Tree")
+plt.tight_layout()
+plt.show()
+
+# 14. Plot feature importance
+importance = pd.DataFrame({
+    "Feature": features,
+    "Importance": id3_model.feature_importances_
+})
+
+importance_sorted = importance.sort_values(
+    "Importance",
+    ascending=True
+)
+
+plt.figure(figsize=(10, 6))
+plt.barh(
+    importance_sorted["Feature"],
+    importance_sorted["Importance"]
+)
+plt.xlabel("Feature Importance")
+plt.ylabel("Customer Behaviour Feature")
+plt.title("Feature Importance in Customer Segmentation")
+plt.tight_layout()
+plt.show()
+
+
+REFERENCE OUTPUT
+----------------
+The original notebook reported approximately:
+
+Accuracy: 0.8468 (84.68%)
+
+Classification report:
+Class          Precision    Recall    F1-score    Support
+High Value        0.93       0.87       0.90         289
+Low Value         0.87       0.85       0.86         289
+Medium Value      0.75       0.82       0.78         290
+
+Original confusion matrix:
+[[251,  2, 36],
+ [  0,247, 42],
+ [ 19, 34,237]]
+
+IMPORTANT: Confusion-matrix row/column order depends on the labels supplied. The matrix above is from the original notebook's default alphabetical class order. The cleaned program explicitly uses [High Value, Low Value, Medium Value], so its displayed matrix uses that order instead. Results can vary slightly depending on dataset version and environment.
+
+IMPORTANT NOTES / EXPLANATION
+-----------------------------
+1. A Decision Tree is a supervised learning algorithm that makes predictions using a sequence of feature-based decisions.
+2. The Online Retail dataset contains invoice lines, products, quantities, prices, dates, customers, and countries.
+3. dropna(subset=["CustomerID"]) removes rows where the customer ID is missing.
+4. Invoice numbers beginning with C indicate cancellations in this dataset, so those rows are removed.
+5. Quantity > 0 and UnitPrice > 0 remove non-positive quantity/price rows.
+6. TotalAmount = Quantity * UnitPrice calculates the value of each transaction line.
+7. groupby("CustomerID") combines a customer's transactions into one customer-level record.
+8. TotalSpend is the sum of TotalAmount for a customer.
+9. TotalQuantity is the sum of quantities purchased by a customer.
+10. NumberOfTransactions counts distinct invoice numbers.
+11. NumberOfProducts counts distinct stock codes purchased.
+12. AverageOrderValue in this notebook is the mean transaction-line TotalAmount, not the conventional mean of total invoice values. Keep this in mind if asked.
+13. pd.qcut(..., q=3) divides customers into three groups based on spending quantiles.
+14. The target label is Segment: Low Value, Medium Value, or High Value.
+15. X contains the selected input features; y contains the target class.
+16. test_size=0.20 reserves 20% of customer records for testing.
+17. stratify=y keeps class proportions similar in the train and test sets.
+18. criterion="entropy" chooses splits using entropy/information gain.
+19. Entropy measures class impurity. For class probabilities p_i, entropy is -sum(p_i log2(p_i)).
+20. Information Gain = parent entropy - weighted child entropy.
+21. max_depth=4 limits the tree depth and helps control overfitting.
+22. random_state=42 makes the model's randomized choices reproducible.
+23. fit() trains the tree; predict() predicts customer segments.
+24. Accuracy is the fraction of correctly classified customers.
+25. Precision, recall, and F1-score are calculated for each segment.
+26. A confusion matrix compares true labels (rows) with predicted labels (columns), following the displayed label order.
+27. plot_tree() visualizes decision rules. Filled nodes indicate the predicted class and class composition.
+28. feature_importances_ gives each feature's relative contribution to the tree's impurity reduction; importances sum to 1 when at least one feature is used.
+29. The original notebook calls the model "ID3". In scikit-learn, DecisionTreeClassifier(criterion="entropy") is an entropy-based decision tree, but it is not necessarily a strict textbook implementation of ID3.
+30. The segment labels are created from TotalSpend before splitting. This is a lab demonstration of classification using spending-derived labels; in a real predictive task, consider leakage and how the labels would be available at prediction time.
+
+VIVA QUESTIONS AND ANSWERS
+--------------------------
+
+1. What is a Decision Tree?
+   A supervised learning model that predicts a target by following feature-based decision rules arranged in a tree.
+
+2. What are the main parts of a Decision Tree?
+   Root node, decision/internal nodes, branches, and leaf nodes.
+
+3. What is the root node?
+   The top node representing the first split in the tree.
+
+4. What is a leaf node?
+   A terminal node that gives the predicted class or output.
+
+5. What is ID3?
+   Iterative Dichotomiser 3, a classic decision-tree algorithm that selects splits using information gain based on entropy.
+
+6. What is entropy?
+   A measure of impurity or uncertainty in a set of class labels.
+
+7. What is information gain?
+   The reduction in entropy after splitting a dataset using a feature.
+
+8. What does criterion="entropy" mean?
+   It tells the decision tree to evaluate splits using entropy/information gain.
+
+9. What does max_depth=4 do?
+   It restricts the tree to a maximum depth of four, helping reduce complexity and overfitting.
+
+10. What is overfitting?
+    When a model learns training data too closely, including noise, and performs worse on unseen data.
+
+11. Why clean the dataset?
+    To remove missing customer IDs, cancelled transactions, and invalid non-positive quantity/price records.
+
+12. What does dropna(subset=["CustomerID"]) do?
+    It removes rows where CustomerID is missing.
+
+13. Why remove invoices beginning with C?
+    In this dataset, they indicate cancelled invoices.
+
+14. What is TotalAmount?
+    Quantity multiplied by UnitPrice for each transaction line.
+
+15. Why group by CustomerID?
+    To summarize individual transactions into customer-level purchasing behaviour.
+
+16. What does pd.qcut() do?
+    It divides numeric data into quantile-based groups.
+
+17. What are the three customer segments?
+    Low Value, Medium Value, and High Value, based on TotalSpend quantiles.
+
+18. What is the target variable?
+    Segment.
+
+19. What are the input features in this experiment?
+    TotalQuantity, NumberOfTransactions, NumberOfProducts, and AverageOrderValue.
+
+20. Why use train_test_split()?
+    To evaluate the trained model on records it did not train on.
+
+21. What does stratify=y do?
+    It preserves approximately the same target-class proportions in training and testing data.
+
+22. What is accuracy?
+    Correct predictions divided by total predictions.
+
+23. What is a confusion matrix?
+    A table showing actual versus predicted classes.
+
+24. What is precision?
+    Of the samples predicted as a class, the proportion that truly belong to that class.
+
+25. What is recall?
+    Of the actual samples in a class, the proportion correctly predicted.
+
+26. What is the F1-score?
+    The harmonic mean of precision and recall.
+
+27. What does feature_importances_ provide?
+    Relative importance scores for the features used by the trained tree.
+
+28. Why visualize the tree?
+    To understand the sequence of splits and the rules the model learned.
+
+29. Why is a decision tree easy to interpret?
+    Its predictions can be traced through a sequence of understandable feature tests.
+
+30. What is one limitation of decision trees?
+    Deep trees can overfit and small data changes can produce a different tree.
+
+31. Is this exactly the ID3 algorithm?
+    It is an entropy-based scikit-learn decision tree. It is similar in split criterion, but not guaranteed to be an exact textbook ID3 implementation.
+
+32. What accuracy did the original notebook achieve?
+    Approximately 84.68%; results can vary with data and environment.
+
+CONCLUSION
+----------
+The Online Retail dataset was cleaned and aggregated to customer-level features. Customers were labelled as Low Value, Medium Value, or High Value based on spending quantiles. An entropy-based Decision Tree was trained and evaluated using accuracy, a classification report, and a confusion matrix. The tree and feature-importance charts were also plotted. The original notebook reported approximately 84.68% accuracy.

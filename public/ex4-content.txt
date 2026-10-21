@@ -1,0 +1,262 @@
+EXPERIMENT 4: TEXT CLASSIFICATION USING NAIVE BAYES
+===================================================
+
+AIM
+---
+To classify text documents into categories using Multinomial Naive Bayes and Bernoulli Naive Bayes, and compare their performance using accuracy, precision, recall, and F1-score.
+
+DATASET
+-------
+20 Newsgroups dataset from scikit-learn.
+- Training documents: 11,314
+- Testing documents: 7,532
+- Number of categories: 20
+
+REQUIREMENTS
+------------
+Install if needed:
+pip install numpy pandas matplotlib scikit-learn
+
+FULL PROGRAM
+------------
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.datasets import fetch_20newsgroups
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB, BernoulliNB
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score
+)
+
+# 1. Load the training and testing datasets
+train_data = fetch_20newsgroups(
+    subset="train",
+    remove=("headers", "footers", "quotes")
+)
+test_data = fetch_20newsgroups(
+    subset="test",
+    remove=("headers", "footers", "quotes")
+)
+
+# 2. Separate text documents and their category labels
+X_train_text = train_data.data
+y_train = train_data.target
+
+X_test_text = test_data.data
+y_test = test_data.target
+
+class_names = train_data.target_names
+
+print("Training Documents:", len(X_train_text))
+print("Testing Documents:", len(X_test_text))
+print("Number of Classes:", len(class_names))
+
+# 3. Convert text into word-count features for Multinomial Naive Bayes
+vectorizer = CountVectorizer(stop_words="english", min_df=2)
+
+X_train = vectorizer.fit_transform(X_train_text)
+X_test = vectorizer.transform(X_test_text)
+
+print("Training feature matrix:", X_train.shape)
+print("Testing feature matrix:", X_test.shape)
+
+# 4. Train and test Multinomial Naive Bayes
+mnb = MultinomialNB()
+mnb.fit(X_train, y_train)
+y_pred_mnb = mnb.predict(X_test)
+
+# 5. Convert text into binary word-presence features for Bernoulli Naive Bayes
+binary_vectorizer = CountVectorizer(
+    stop_words="english",
+    min_df=2,
+    binary=True
+)
+
+X_train_binary = binary_vectorizer.fit_transform(X_train_text)
+X_test_binary = binary_vectorizer.transform(X_test_text)
+
+# 6. Train and test Bernoulli Naive Bayes
+bnb = BernoulliNB()
+bnb.fit(X_train_binary, y_train)
+y_pred_bnb = bnb.predict(X_test_binary)
+
+# 7. Calculate evaluation metrics for Multinomial Naive Bayes
+acc_mnb = accuracy_score(y_test, y_pred_mnb)
+prec_mnb = precision_score(y_test, y_pred_mnb, average="weighted", zero_division=0)
+rec_mnb = recall_score(y_test, y_pred_mnb, average="weighted", zero_division=0)
+f1_mnb = f1_score(y_test, y_pred_mnb, average="weighted", zero_division=0)
+
+# 8. Calculate evaluation metrics for Bernoulli Naive Bayes
+acc_bnb = accuracy_score(y_test, y_pred_bnb)
+prec_bnb = precision_score(y_test, y_pred_bnb, average="weighted", zero_division=0)
+rec_bnb = recall_score(y_test, y_pred_bnb, average="weighted", zero_division=0)
+f1_bnb = f1_score(y_test, y_pred_bnb, average="weighted", zero_division=0)
+
+# 9. Display the comparison in a table
+results = pd.DataFrame({
+    "Metric": ["Accuracy", "Precision", "Recall", "F1 Score"],
+    "Multinomial NB": [acc_mnb, prec_mnb, rec_mnb, f1_mnb],
+    "Bernoulli NB": [acc_bnb, prec_bnb, rec_bnb, f1_bnb]
+})
+
+print("\\nModel Performance:")
+print(results.to_string(index=False))
+
+# 10. Plot the model performance metrics
+labels = [
+    "Acc: MNB", "Acc: BNB",
+    "Prec: MNB", "Prec: BNB",
+    "Rec: MNB", "Rec: BNB",
+    "F1: MNB", "F1: BNB"
+]
+
+scores = [
+    acc_mnb, acc_bnb,
+    prec_mnb, prec_bnb,
+    rec_mnb, rec_bnb,
+    f1_mnb, f1_bnb
+]
+
+plt.figure(figsize=(10, 5))
+plt.bar(labels, scores)
+plt.title("Naive Bayes Performance")
+plt.ylabel("Score")
+plt.ylim(0, 1)
+plt.xticks(rotation=25, ha="right")
+plt.grid(axis="y", alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+
+EXPECTED/REFERENCE OUTPUT
+-------------------------
+The original notebook reported approximately:
+
+Metric       Multinomial NB    Bernoulli NB
+Accuracy          0.6511           0.4851
+Precision         0.6425           0.6270
+Recall            0.6511           0.4851
+F1 Score          0.6296           0.4808
+
+Small differences may occur across scikit-learn versions.
+
+GRAPHS
+------
+The program produces one bar chart titled "Naive Bayes Performance".
+- X-axis: evaluation metrics for each model.
+- Y-axis: metric score from 0 to 1.
+- Higher bars indicate better scores for that metric.
+- Multinomial NB generally performs better on this dataset.
+
+IMPORTANT NOTES / EXPLANATION
+-----------------------------
+1. Naive Bayes is a probabilistic classifier based on Bayes' theorem and a conditional-independence assumption.
+2. The 20 Newsgroups dataset contains text messages belonging to 20 different discussion categories.
+3. X_train_text and X_test_text contain the raw text documents.
+4. y_train and y_test contain the numeric category labels.
+5. CountVectorizer converts text into a numerical document-term matrix.
+6. fit_transform() learns the vocabulary from the training text and converts it to features.
+7. transform() converts test text using the same vocabulary. Do not fit a new vocabulary on test data.
+8. stop_words="english" removes common English words such as "the", "is", and "and".
+9. min_df=2 keeps words that appear in at least two documents in the training corpus.
+10. MultinomialNB uses word occurrence counts. It is often suitable for word-count text classification.
+11. BernoulliNB is designed for binary features: whether a word appears or does not appear in a document.
+12. binary=True makes CountVectorizer output 1 when a word appears and 0 when it does not.
+13. fit() trains a model; predict() predicts category labels.
+14. Accuracy = correct predictions / total predictions.
+15. Precision measures how many documents predicted as a class actually belong to that class.
+16. Recall measures how many documents of a class were correctly identified.
+17. F1-score is the harmonic mean of precision and recall.
+18. average="weighted" calculates each class's metric and averages them according to the number of true samples in each class.
+19. A feature matrix shape such as (11314, 39115) means 11,314 documents and 39,115 vocabulary features.
+20. The original notebook called plt.legend() without labelled chart elements, causing a warning. This cleaned version does not call legend(), because the x-axis labels already identify each bar.
+21. The dataset may need to be downloaded the first time, so an internet connection may be required.
+22. The numerical results above are reference results from the notebook; your run can vary slightly with library versions.
+
+VIVA QUESTIONS AND ANSWERS
+--------------------------
+
+1. What is Naive Bayes?
+   It is a probabilistic classification algorithm based on Bayes' theorem, with a simplifying assumption that features are conditionally independent given the class.
+
+2. State Bayes' theorem.
+   P(C|X) = P(X|C) P(C) / P(X), where C is a class and X is the observed data.
+
+3. Why is it called "naive"?
+   Because it assumes that features are conditionally independent given the class, which is often an oversimplification.
+
+4. What is text classification?
+   Assigning a text document to one of a set of predefined categories.
+
+5. What is the 20 Newsgroups dataset?
+   A collection of newsgroup text documents divided into 20 topic categories.
+
+6. What is CountVectorizer?
+   A tool that converts text documents into numerical features based on vocabulary word counts.
+
+7. What is a document-term matrix?
+   A matrix where rows represent documents and columns represent vocabulary terms; each value records a term's count or presence.
+
+8. What does fit_transform() do?
+   It learns the vocabulary from the supplied text and transforms that text into a feature matrix.
+
+9. Why use transform() on the test data?
+   To use the vocabulary learned from training data and avoid learning features from the test set.
+
+10. What does stop_words="english" do?
+    It removes common English words that usually contribute little to topic classification.
+
+11. What does min_df=2 mean?
+    It ignores terms that occur in fewer than two documents in the training data.
+
+12. What is Multinomial Naive Bayes?
+    A Naive Bayes classifier that models discrete feature counts, commonly word counts.
+
+13. What is Bernoulli Naive Bayes?
+    A Naive Bayes classifier designed for binary features representing presence or absence.
+
+14. What is the difference between MultinomialNB and BernoulliNB?
+    MultinomialNB uses word counts; BernoulliNB uses binary word-presence/absence features.
+
+15. Why is binary=True used?
+    It makes each word feature 1 if the word occurs in a document and 0 otherwise.
+
+16. What is accuracy?
+    The proportion of all predictions that are correct.
+
+17. What is precision?
+    TP / (TP + FP). It measures the reliability of positive/class predictions.
+
+18. What is recall?
+    TP / (TP + FN). It measures how many actual members of a class were identified.
+
+19. What is the F1-score?
+    2 × (Precision × Recall) / (Precision + Recall).
+
+20. Why use weighted averaging?
+    It accounts for differences in class sizes by weighting each class's metric by its number of true samples.
+
+21. What does model.fit() do?
+    It learns the model parameters from the training features and labels.
+
+22. What does model.predict() return?
+    The predicted class label for each input document.
+
+23. Why can MultinomialNB perform better here?
+    Word frequencies often contain useful topic information, so retaining counts can be more informative than only recording presence or absence.
+
+24. What is one limitation of Naive Bayes?
+    Its feature-independence assumption may be unrealistic because words and features can be related.
+
+25. What is the purpose of the bar graph?
+    To visually compare the evaluation metrics of MultinomialNB and BernoulliNB.
+
+CONCLUSION
+----------
+The 20 Newsgroups text documents were classified using Multinomial Naive Bayes and Bernoulli Naive Bayes. Their accuracy, precision, recall, and F1-score were calculated and compared using a table and bar chart. In the reference run, Multinomial Naive Bayes performed better overall than Bernoulli Naive Bayes.

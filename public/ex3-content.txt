@@ -1,0 +1,256 @@
+EXPERIMENT 3: LOGISTIC REGRESSION USING MLE, L1 AND L2 REGULARIZATION
+
+AIM
+To implement Logistic Regression on the Breast Cancer dataset and compare an unregularized model (MLE) with L1- and L2-regularized models (MAP-style), using classification metrics, confusion matrices, a comparison bar chart, and ROC curves.
+
+PROGRAM
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, roc_curve, auc
+)
+from sklearn.linear_model import LogisticRegression
+
+# Load the Breast Cancer dataset
+data = load_breast_cancer()
+X = data.data
+y = data.target
+
+print("Dataset Shape:", X.shape)
+print("Classes:", np.unique(y))
+
+# Split into training and testing data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# Standardize the features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# -------------------- 1. MLE: No regularization --------------------
+mle_model = LogisticRegression(
+    penalty=None,
+    max_iter=5000,
+    random_state=42
+)
+mle_model.fit(X_train, y_train)
+y_pred_mle = mle_model.predict(X_test)
+
+# -------------------- 2. MAP-style L2 regularization --------------------
+map_l2 = LogisticRegression(
+    penalty="l2",
+    C=1.0,
+    solver="lbfgs",
+    max_iter=5000,
+    random_state=42
+)
+map_l2.fit(X_train, y_train)
+y_pred_l2 = map_l2.predict(X_test)
+
+# -------------------- 3. MAP-style L1 regularization --------------------
+map_l1 = LogisticRegression(
+    penalty="l1",
+    C=1.0,
+    solver="liblinear",
+    max_iter=5000,
+    random_state=42
+)
+map_l1.fit(X_train, y_train)
+y_pred_l1 = map_l1.predict(X_test)
+
+# Function to evaluate a model
+def evaluate(model_name, y_true, y_pred):
+    print("\n", "=" * 40)
+    print(model_name)
+    print("=" * 40)
+    print("Accuracy:", accuracy_score(y_true, y_pred))
+    print("Precision:", precision_score(y_true, y_pred))
+    print("Recall:", recall_score(y_true, y_pred))
+    print("F1 Score:", f1_score(y_true, y_pred))
+    print("\nConfusion Matrix:")
+    print(confusion_matrix(y_true, y_pred))
+
+# Evaluate all three models
+evaluate("MLE Model", y_test, y_pred_mle)
+evaluate("MAP L1", y_test, y_pred_l1)
+evaluate("MAP L2", y_test, y_pred_l2)
+
+# Count coefficients that are exactly zero
+print("\nNumber of Zero Coefficients")
+print("MLE   :", np.sum(mle_model.coef_[0] == 0))
+print("MAP L1:", np.sum(map_l1.coef_[0] == 0))
+print("MAP L2:", np.sum(map_l2.coef_[0] == 0))
+
+# -------------------- Create comparison table --------------------
+results = pd.DataFrame(columns=[
+    "Model", "Accuracy", "Precision", "Recall", "F1 Score"
+])
+
+models = [
+    ("MLE", mle_model, y_pred_mle),
+    ("MAP L2", map_l2, y_pred_l2),
+    ("MAP L1", map_l1, y_pred_l1)
+]
+
+for name, model, pred in models:
+    results.loc[len(results)] = [
+        name,
+        accuracy_score(y_test, pred),
+        precision_score(y_test, pred),
+        recall_score(y_test, pred),
+        f1_score(y_test, pred)
+    ]
+
+print("\nModel Performance Comparison:")
+print(results)
+
+# -------------------- Graph 1: Performance comparison bar chart --------------------
+ax = results.set_index("Model").plot(
+    kind="bar",
+    figsize=(10, 6)
+)
+plt.title("Performance Comparison: MLE vs MAP-L2 vs MAP-L1")
+plt.xlabel("Model")
+plt.ylabel("Score")
+plt.ylim(0.85, 1.02)
+plt.xticks(rotation=0)
+plt.legend(title="Metric")
+plt.grid(axis="y", alpha=0.2)
+
+for container in ax.containers:
+    ax.bar_label(container, fmt="%.3f", padding=2)
+
+plt.tight_layout()
+plt.show()
+
+# -------------------- Graph 2: ROC curves --------------------
+plt.figure(figsize=(9, 7))
+
+for name, model, pred in models:
+    y_prob = model.predict_proba(X_test)[:, 1]
+    fpr, tpr, thresholds = roc_curve(y_test, y_prob)
+    roc_auc = auc(fpr, tpr)
+
+    plt.plot(
+        fpr,
+        tpr,
+        label=f"{name} (AUC={roc_auc:.3f})"
+    )
+
+# Diagonal line represents a random classifier
+plt.plot(
+    [0, 1],
+    [0, 1],
+    linestyle="--",
+    label="Random Classifier"
+)
+
+plt.xlabel("False Positive Rate (FPR)")
+plt.ylabel("True Positive Rate (TPR)")
+plt.title("ROC Curve: MLE vs MAP L2 vs MAP L1")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+
+IMPORTANT NOTES
+
+1. Dataset: Breast Cancer dataset from scikit-learn.
+2. X contains the input features and y contains the binary class labels.
+3. Logistic Regression is a classification algorithm, even though its name contains the word regression.
+4. train_test_split() divides data into training and testing subsets.
+5. test_size=0.2 means 20% of data is used for testing and 80% for training.
+6. random_state=42 makes the split reproducible.
+7. stratify=y helps preserve the class proportions in the training and testing sets.
+8. StandardScaler standardizes features. fit_transform() is used on training data; transform() applies the same scaling to test data.
+9. MLE means Maximum Likelihood Estimation. The unregularized model estimates parameters by maximizing the likelihood of the observed labels.
+10. L1 regularization adds a penalty based on the absolute values of coefficients and can make some coefficients exactly zero.
+11. L2 regularization penalizes squared coefficient values and generally shrinks coefficients toward zero.
+12. L1- and L2-regularized Logistic Regression can be interpreted as MAP-style estimation when the penalties correspond to prior assumptions.
+13. In scikit-learn, smaller C means stronger regularization; larger C means weaker regularization.
+14. Accuracy = correct predictions / total predictions.
+15. Precision = TP / (TP + FP).
+16. Recall = TP / (TP + FN).
+17. F1 score is the harmonic mean of precision and recall.
+18. Confusion matrix shows counts of correct and incorrect predictions for each class.
+19. ROC curve plots True Positive Rate against False Positive Rate at different thresholds.
+20. AUC is the area under the ROC curve. A value closer to 1 generally indicates better class separation; 0.5 is approximately random ranking.
+21. predict() gives class labels; predict_proba() gives predicted class probabilities.
+22. The program counts exact zero coefficients. L1 regularization often creates exact zeros; L2 usually shrinks coefficients without making them exactly zero.
+23. If your installed scikit-learn version does not accept penalty=None, use the version-compatible setting documented for your installation (newer versions support penalty=None).
+
+
+VIVA QUESTIONS AND ANSWERS
+
+1. What is Logistic Regression?
+   A supervised classification algorithm used to predict the probability of a class.
+
+2. Why is it called Logistic Regression if it is used for classification?
+   It models class probability using the logistic (sigmoid) function and assigns a class based on that probability.
+
+3. Which dataset is used?
+   The Breast Cancer dataset from scikit-learn.
+
+4. What is the purpose of StandardScaler?
+   To standardize features so they have comparable scales.
+
+5. What is MLE?
+   Maximum Likelihood Estimation; it estimates parameters that make the observed data most likely.
+
+6. What is MAP?
+   Maximum A Posteriori estimation; it combines the likelihood with prior information. Regularized models can represent MAP-style estimation.
+
+7. What is L1 regularization?
+   A penalty based on the sum of absolute coefficient values. It can produce sparse models with coefficients equal to zero.
+
+8. What is L2 regularization?
+   A penalty based on the sum of squared coefficient values. It shrinks coefficients toward zero.
+
+9. What is the difference between L1 and L2?
+   L1 can make some coefficients exactly zero; L2 generally shrinks them without setting them exactly to zero.
+
+10. What does C control in LogisticRegression?
+    The inverse strength of regularization. Smaller C means stronger regularization.
+
+11. What is accuracy?
+    The proportion of all predictions that are correct.
+
+12. What is precision?
+    Of the samples predicted positive, the proportion that are actually positive.
+
+13. What is recall?
+    Of the actual positive samples, the proportion correctly identified.
+
+14. What is the F1 score?
+    The harmonic mean of precision and recall.
+
+15. What is a confusion matrix?
+    A table comparing actual class labels with predicted class labels.
+
+16. What is an ROC curve?
+    A curve showing the True Positive Rate against the False Positive Rate at different classification thresholds.
+
+17. What is AUC?
+    Area Under the ROC Curve; it summarizes how well the model ranks positive samples above negative samples.
+
+18. What is the difference between predict() and predict_proba()?
+    predict() returns class labels; predict_proba() returns class probabilities.
+
+19. Why do we use stratify=y?
+    To preserve the approximate class proportions in both the training and testing sets.
+
+20. Why compare MLE, L1 and L2?
+    To examine how regularization affects model performance and coefficient values.

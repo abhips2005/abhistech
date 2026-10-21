@@ -1,4 +1,8 @@
-﻿export default function handler(req, res) {
+﻿import { readFileSync } from "fs";
+import { join } from "path";
+
+export default function handler(req, res) {
+  const content = readFileSync(join(process.cwd(), "public", "ex2-content.txt"), "utf-8");
   res.setHeader("Content-Type", "text/plain");
-  res.send("This is page ex2");
+  res.send(content);
 }
