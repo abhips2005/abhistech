@@ -1,14 +1,14 @@
 ﻿export default function Home() {
   return (
     <div className="container">
-      <div className="badge">🚀 Coming Soon</div>
+      <div className="badge">Hello There</div>
 
-      <h1><span>Abhijith S</span></h1>
-
+      <h1><span>Hello There</span></h1>
+    
       <p className="tagline">
-        <strong>3rd Year CS Student</strong> &amp; <strong>Freelancer</strong>
+        <strong>Good Morning</strong> &amp; <strong>Have a great day</strong>
         <br />
-        Building things for the web — portfolio launching soon.
+        
       </p>
 
       <div className="divider">
@@ -17,17 +17,16 @@
 
       <div className="card">
         <p>
-          Something exciting is in the works. In the meantime, feel free to
-          reach out — I am open to freelance projects and collaborations.
+          Here is my portfolio website link.
         </p>
 
         <div className="contact">
-          <a href="mailto:hello@abhistech.in" id="email-link">
+          <a href="mailto:[EMAIL_ADDRESS]" id="email-link">
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
               <polyline points="22,6 12,13 2,6" />
             </svg>
-            hello@abhistech.in
+            [EMAIL_ADDRESS]
           </a>
           <a href="https://github.com/" target="_blank" rel="noopener noreferrer" id="github-link">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
@@ -45,7 +44,7 @@
       </div>
 
       <p className="footer">
-        &copy; 2026 <a href="https://abhistech.in">abhistech.in</a> — Abhijith S
+        &copy; 2026 <a href="https://www.google.com">www.google.com</a>
       </p>
     </div>
   );
