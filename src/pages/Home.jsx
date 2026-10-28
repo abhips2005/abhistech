@@ -3,7 +3,7 @@
     <div className="container">
       <div className="badge">Hello There</div>
 
-      <h1><span>Hello There</span></h1>
+      <h1><span>Thankyou CSI SJCET</span></h1>
     
       <p className="tagline">
         <strong>Good Morning</strong> &amp; <strong>Have a great day</strong>
